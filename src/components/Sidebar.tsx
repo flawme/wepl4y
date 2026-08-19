@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LibraryFolder, ScanProgress, Playlist } from "../types";
 
 interface SidebarProps {
@@ -7,12 +7,17 @@ interface SidebarProps {
   scanProgress: ScanProgress | null;
   onPickFolder: () => void;
   onRemoveFolder: (id: string) => void;
+  onSelectFolder: (folder: LibraryFolder) => void;
+  onSelectAllSongs: () => void;
   onRescan: () => void;
   trackCount: number;
   onCreatePlaylist: (name: string, isSmart: boolean) => void;
   onDeletePlaylist: (id: string) => void;
   onSelectPlaylist: (playlist: Playlist) => void;
+  onSelectFavorites: () => void;
   selectedPlaylistId: string | null;
+  favoritesSelected: boolean;
+  selectedFolderId: string | null;
 }
 
 export function Sidebar({
@@ -21,16 +26,42 @@ export function Sidebar({
   scanProgress,
   onPickFolder,
   onRemoveFolder,
+  onSelectFolder,
+  onSelectAllSongs,
   onRescan,
   trackCount,
   onCreatePlaylist,
   onDeletePlaylist,
   onSelectPlaylist,
+  onSelectFavorites,
   selectedPlaylistId,
+  favoritesSelected,
+  selectedFolderId,
 }: SidebarProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [isSmart, setIsSmart] = useState(false);
+  const createPlaylistRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCreate) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!createPlaylistRef.current?.contains(event.target as Node)) {
+        setShowCreate(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowCreate(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showCreate]);
 
   function handleCreate() {
     if (newName.trim()) {
@@ -42,11 +73,11 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex w-56 flex-col border-r border-border bg-surface">
+    <aside className="app-sidebar flex w-56 flex-col border-r border-border bg-surface">
       <div className="p-3">
         <button
           onClick={onPickFolder}
-          className="w-full rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+          className="w-full rounded-xl bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
         >
           + Add Folder
         </button>
@@ -56,7 +87,7 @@ export function Sidebar({
         <button
           onClick={onRescan}
           disabled={!!scanProgress}
-          className="w-full rounded-md border border-border px-3 py-1.5 text-sm text-text-dim hover:bg-surface-2 disabled:opacity-50"
+          className="w-full rounded-xl border border-border px-3 py-1.5 text-sm text-text-dim hover:bg-surface-2 disabled:opacity-50"
         >
           {scanProgress ? "Scanning..." : "Rescan Library"}
         </button>
@@ -86,6 +117,23 @@ export function Sidebar({
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-faint">
           Library
         </p>
+        <button
+          onClick={onSelectAllSongs}
+          className={`mb-1 flex w-full items-center rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2 ${
+            !favoritesSelected && !selectedFolderId ? "bg-surface-2 text-accent" : "text-text-dim"
+          }`}
+        >
+          All Songs
+        </button>
+        <button
+          onClick={onSelectFavorites}
+          className={`mb-2 flex w-full items-center rounded-lg px-2 py-1 text-left text-sm hover:bg-surface-2 ${
+            favoritesSelected ? "bg-surface-2 text-accent" : "text-text-dim"
+          }`}
+        >
+          <span className="mr-2 text-accent-soft">&#9829;</span>
+          Favorites
+        </button>
         {folders.length === 0 ? (
           <p className="text-xs text-text-faint">No folders added</p>
         ) : (
@@ -93,9 +141,16 @@ export function Sidebar({
             {folders.map((folder) => (
               <li
                 key={folder.id}
-                className="group flex items-center justify-between rounded px-2 py-1 text-sm hover:bg-surface-2"
+                className={`group flex items-center justify-between rounded-lg px-2 py-1 text-sm hover:bg-surface-2 ${
+                  selectedFolderId === folder.id ? "bg-surface-2 text-accent" : ""
+                }`}
               >
-                <span className="truncate">{folder.label}</span>
+                <button
+                  onClick={() => onSelectFolder(folder)}
+                  className="flex-1 truncate text-left"
+                >
+                  {folder.label}
+                </button>
                 <button
                   onClick={() => onRemoveFolder(folder.id)}
                   className="ml-2 hidden text-text-faint hover:text-red-400 group-hover:block"
@@ -122,7 +177,10 @@ export function Sidebar({
         </div>
 
         {showCreate && (
-          <div className="mb-2 space-y-2 rounded bg-surface-2 p-2">
+          <div
+            ref={createPlaylistRef}
+            className="mb-2 space-y-2 rounded-xl bg-surface-2 p-2"
+          >
             <input
               type="text"
               value={newName}

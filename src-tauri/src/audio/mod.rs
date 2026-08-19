@@ -53,7 +53,9 @@ pub struct PlaybackState {
     pub repeat: RepeatMode,
     pub shuffle: bool,
     pub volume: f32,
+    #[allow(dead_code)]
     pub crossfade: bool,
+    #[allow(dead_code)]
     pub crossfade_secs: f64,
     pub is_playing: bool,
     pub position_secs: f64,
@@ -294,14 +296,19 @@ impl PlaybackState {
         self.dirty = true;
     }
 
-    pub fn set_queue(&mut self, tracks: Vec<QueueTrack>, start_index: Option<usize>) {
+    pub fn set_queue(
+        &mut self,
+        tracks: Vec<QueueTrack>,
+        start_index: Option<usize>,
+    ) -> Result<(), String> {
         self.queue = tracks;
         self.current_index = None;
         self.revision += 1;
         self.dirty = true;
         if let Some(idx) = start_index {
-            let _ = self.play_index(idx);
+            self.play_index(idx)?;
         }
+        Ok(())
     }
 
     pub fn clear_queue(&mut self) {
@@ -353,6 +360,7 @@ impl PlaybackState {
     }
 
     /// Get the current track, if any.
+    #[allow(dead_code)]
     pub fn current_track(&self) -> Option<&QueueTrack> {
         self.current_index.and_then(|i| self.queue.get(i))
     }
@@ -427,19 +435,17 @@ impl PlaybackEngine {
                 loop {
                     std::thread::sleep(Duration::from_millis(500));
 
-                    let mut needs_advance = false;
-                    let mut needs_emit = false;
-
-                    {
+                    let (needs_advance, mut needs_emit) = {
                         let mut st = match state.lock() {
                             Ok(s) => s,
                             Err(_) => continue,
                         };
 
-                        needs_advance = st.poll_position();
-                        needs_emit = st.dirty;
+                        let advance = st.poll_position();
+                        let emit = st.dirty;
                         st.dirty = false;
-                    }
+                        (advance, emit)
+                    };
 
                     // Auto-advance if the track ended
                     if needs_advance {

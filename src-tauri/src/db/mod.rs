@@ -26,6 +26,7 @@ pub struct Track {
     pub file_size: Option<i64>,
     pub art_path: Option<String>,
     pub date_added: String,
+    pub favorite: bool,
 }
 
 /// A library folder the user has added.
@@ -48,6 +49,7 @@ pub struct Playlist {
 }
 
 /// A track in a manual playlist (ordered).
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlaylistEntry {
     pub playlist_id: String,
@@ -81,6 +83,7 @@ impl Database {
     }
 
     /// Create an in-memory database (for tests).
+    #[allow(dead_code)]
     pub fn open_memory() -> Result<Self, String> {
         let conn = Connection::open_in_memory().map_err(|e| e.to_string())?;
         Self::init_schema(&conn)?;
@@ -119,6 +122,10 @@ impl Database {
             CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album);
             CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
             CREATE INDEX IF NOT EXISTS idx_tracks_year ON tracks(year);
+
+            CREATE TABLE IF NOT EXISTS favorites (
+                track_id TEXT PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE
+            );
 
             CREATE TABLE IF NOT EXISTS playlists (
                 id          TEXT PRIMARY KEY,
@@ -266,7 +273,8 @@ impl Database {
         let mut stmt = conn
             .prepare(
                 "SELECT id, file_path, title, artist, album, album_artist, genre,
-                        year, track_number, duration_secs, file_size, art_path, date_added
+                        year, track_number, duration_secs, file_size, art_path, date_added,
+                        EXISTS(SELECT 1 FROM favorites f WHERE f.track_id = tracks.id)
                  FROM tracks
                  ORDER BY artist COLLATE NOCASE, album COLLATE NOCASE, track_number",
             )
@@ -287,11 +295,40 @@ impl Database {
                     file_size: row.get(10)?,
                     art_path: row.get(11)?,
                     date_added: row.get(12)?,
+                    favorite: row.get(13)?,
                 })
             })
             .map_err(|e| e.to_string())?;
         rows.collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.to_string())
+    }
+
+    /// Check whether a track already has an album-art path stored.
+    pub fn track_has_art(&self, file_path: &str) -> Result<bool, String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        conn.query_row(
+            "SELECT art_path IS NOT NULL FROM tracks WHERE file_path = ?1",
+            params![file_path],
+            |row| row.get(0),
+        )
+        .optional()
+        .map(|value| value.unwrap_or(false))
+        .map_err(|e| e.to_string())
+    }
+
+    pub fn set_favorite(&self, track_id: &str, favorite: bool) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| e.to_string())?;
+        if favorite {
+            conn.execute(
+                "INSERT OR IGNORE INTO favorites (track_id) VALUES (?1)",
+                params![track_id],
+            )
+            .map_err(|error| error.to_string())?;
+        } else {
+            conn.execute("DELETE FROM favorites WHERE track_id = ?1", params![track_id])
+                .map_err(|error| error.to_string())?;
+        }
+        Ok(())
     }
 
     /// Get the total track count.
@@ -388,7 +425,8 @@ impl Database {
             .prepare(
                 "SELECT t.id, t.file_path, t.title, t.artist, t.album, t.album_artist,
                         t.genre, t.year, t.track_number, t.duration_secs, t.file_size,
-                        t.art_path, t.date_added
+                         t.art_path, t.date_added,
+                         EXISTS(SELECT 1 FROM favorites f WHERE f.track_id = t.id)
                  FROM playlist_entries pe
                  JOIN tracks t ON pe.track_id = t.id
                  WHERE pe.playlist_id = ?1
@@ -411,6 +449,7 @@ impl Database {
                     file_size: row.get(10)?,
                     art_path: row.get(11)?,
                     date_added: row.get(12)?,
+                    favorite: row.get(13)?,
                 })
             })
             .map_err(|e| e.to_string())?;

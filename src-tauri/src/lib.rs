@@ -11,9 +11,9 @@ use std::sync::Arc;
 
 use audio::PlaybackEngine;
 use db::Database;
-use mini_player::{MiniPlayerWindowState, DockEdge};
+use mini_player::MiniPlayerWindowState;
 use settings::SettingsState;
-use tauri::{Manager, WindowEvent};
+use tauri::Manager;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -31,10 +31,14 @@ fn toggle_mini_player(app: tauri::AppHandle) -> Result<(), String> {
     mini_player::toggle_mini_player(&app).map_err(|e| e.to_string())
 }
 
-/// Dock the mini-player to a screen edge.
 #[tauri::command]
-fn dock_mini_player(app: tauri::AppHandle, edge: DockEdge) -> Result<(), String> {
-    mini_player::dock_mini_player(&app, edge).map_err(|e| e.to_string())
+fn switch_to_mini_player(app: tauri::AppHandle) -> Result<(), String> {
+    mini_player::switch_to_mini_player(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn switch_to_full_player(app: tauri::AppHandle) -> Result<(), String> {
+    mini_player::switch_to_full_player(&app).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -91,9 +95,11 @@ pub fn run() {
             greet,
             app_version,
             toggle_mini_player,
-            dock_mini_player,
-            mini_player::check_snap_edge,
+            switch_to_mini_player,
+            switch_to_full_player,
             mini_player::save_mini_player_position_cmd,
+            mini_player::get_mini_player_mode_cmd,
+            mini_player::set_mini_player_mode_cmd,
             // Settings commands
             settings::get_settings,
             settings::update_settings,
@@ -102,6 +108,7 @@ pub fn run() {
             audio::commands::play_track,
             audio::commands::play_file_test,
             audio::commands::play_queue,
+            audio::commands::play_random_track,
             audio::commands::play_pause,
             audio::commands::pause,
             audio::commands::resume,
@@ -120,6 +127,8 @@ pub fn run() {
             library::commands::remove_library_folder,
             library::commands::rescan_library,
             library::commands::get_tracks,
+            library::commands::set_track_favorite,
+            library::commands::get_favorite_tracks,
             library::commands::get_track_count,
             library::commands::pick_library_folder,
             // Playlist commands

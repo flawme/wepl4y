@@ -38,10 +38,14 @@ export function usePlayback() {
   );
 
   const playPause = useCallback(async () => {
-    await invoke("play_pause");
+    if (state?.current_index == null) {
+      await invoke("play_random_track");
+    } else {
+      await invoke("play_pause");
+    }
     const s = await invoke<PlaybackSnapshot>("get_playback_state");
     setState(s);
-  }, []);
+  }, [state?.current_index]);
 
   const next = useCallback(async () => {
     await invoke("next");

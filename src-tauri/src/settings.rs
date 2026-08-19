@@ -17,6 +17,12 @@ pub struct Settings {
     pub repeat: String,
     pub shuffle: bool,
     pub theme: String,
+    #[serde(default = "default_entry_animation")]
+    pub entry_animation: bool,
+}
+
+fn default_entry_animation() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -28,6 +34,7 @@ impl Default for Settings {
             repeat: "off".to_string(),
             shuffle: false,
             theme: "dark".to_string(),
+            entry_animation: true,
         }
     }
 }

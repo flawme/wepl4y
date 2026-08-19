@@ -47,6 +47,19 @@ pub fn setup_media_keys(app: &AppHandle) {
 }
 
 fn handle_media_key(app: &AppHandle, key: &str) {
+    if key == "MediaPlayPause" {
+        let should_start_random = app
+            .state::<PlaybackEngine>()
+            .state
+            .lock()
+            .map(|state| state.current_index.is_none())
+            .unwrap_or(true);
+        if should_start_random {
+            let _ = crate::audio::commands::play_random_track_from_app(app);
+            return;
+        }
+    }
+
     let engine = app.state::<PlaybackEngine>();
     let mut state = match engine.state.lock() {
         Ok(s) => s,

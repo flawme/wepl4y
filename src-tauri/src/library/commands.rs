@@ -67,6 +67,24 @@ pub fn get_tracks(db: State<'_, Arc<Database>>) -> Result<Vec<Track>, String> {
     db.get_all_tracks()
 }
 
+#[tauri::command]
+pub fn set_track_favorite(
+    db: State<'_, Arc<Database>>,
+    track_id: String,
+    favorite: bool,
+) -> Result<(), String> {
+    db.set_favorite(&track_id, favorite)
+}
+
+#[tauri::command]
+pub fn get_favorite_tracks(db: State<'_, Arc<Database>>) -> Result<Vec<Track>, String> {
+    Ok(db
+        .get_all_tracks()?
+        .into_iter()
+        .filter(|track| track.favorite)
+        .collect())
+}
+
 /// Get the total track count.
 #[tauri::command]
 pub fn get_track_count(db: State<'_, Arc<Database>>) -> Result<i64, String> {

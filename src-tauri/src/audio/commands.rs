@@ -1,6 +1,10 @@
-use tauri::State;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use tauri::{AppHandle, Manager, State};
 
 use crate::audio::{PlaybackEngine, PlaybackSnapshot, QueueTrack, RepeatMode};
+use crate::db::Database;
 
 #[tauri::command]
 pub fn play_track(path: String, title: String, artist: String, album: String) -> Result<(), String> {
@@ -23,8 +27,7 @@ pub fn play_file_test(engine: State<'_, PlaybackEngine>, path: String) -> Result
         art_path: None,
     };
     let mut state = engine.state.lock().map_err(|e| e.to_string())?;
-    state.set_queue(vec![track], Some(0));
-    Ok(())
+    state.set_queue(vec![track], Some(0))
 }
 
 #[tauri::command]
@@ -34,8 +37,51 @@ pub fn play_queue(
     start_index: Option<usize>,
 ) -> Result<(), String> {
     let mut state = engine.state.lock().map_err(|e| e.to_string())?;
-    state.set_queue(tracks, start_index);
-    Ok(())
+    state.set_queue(tracks, start_index)
+}
+
+/// Start a random track from the library when no queue is active.
+fn start_random_track(engine: &PlaybackEngine, db: &Database) -> Result<(), String> {
+    let tracks = db.get_all_tracks()?;
+    if tracks.is_empty() {
+        return Err("No tracks in the library".to_string());
+    }
+
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_nanos() as usize;
+    let start_index = seed % tracks.len();
+    let queue = tracks
+        .into_iter()
+        .map(|track| QueueTrack {
+            id: track.id,
+            path: track.file_path,
+            title: track.title,
+            artist: track.artist,
+            album: track.album,
+            duration_secs: track.duration_secs,
+            art_path: track.art_path,
+        })
+        .collect();
+
+    let mut state = engine.state.lock().map_err(|error| error.to_string())?;
+    state.set_queue(queue, Some(start_index))
+}
+
+#[tauri::command]
+pub fn play_random_track(
+    engine: State<'_, PlaybackEngine>,
+    db: State<'_, Arc<Database>>,
+) -> Result<(), String> {
+    start_random_track(&engine, &db)
+}
+
+/// Tray and media-key entrypoint for starting a random track without a webview.
+pub fn play_random_track_from_app(app: &AppHandle) -> Result<(), String> {
+    let engine = app.state::<PlaybackEngine>();
+    let db = app.state::<Arc<Database>>();
+    start_random_track(&engine, &db)
 }
 
 #[tauri::command]

@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Squircle Clip -->
+    <clipPath id="squircle-clip">
+      <rect x="16" y="16" width="480" height="480" rx="108" ry="108" />
+    </clipPath>
+
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181a24" />
+      <stop offset="50%" stop-color="#0f1117" />
+      <stop offset="100%" stop-color="#07080b" />
+    </linearGradient>
+
+    <!-- Border Glow Gradient -->
+    <linearGradient id="border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7597" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#d94f72" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#4a1827" stop-opacity="0.25" />
+    </linearGradient>
+
+    <!-- Vinyl Base Radial -->
+    <radialGradient id="vinyl-base" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1f2330" />
+      <stop offset="65%" stop-color="#13151e" />
+      <stop offset="90%" stop-color="#191b26" />
+      <stop offset="100%" stop-color="#0c0d12" />
+    </radialGradient>
+
+    <!-- Vinyl Metallic Sheen -->
+    <radialGradient id="vinyl-sheen" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#ff7597" stop-opacity="0.22" />
+      <stop offset="45%" stop-color="#d94f72" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Play Emblem Primary Gradient -->
+    <linearGradient id="play-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9eb5" />
+      <stop offset="40%" stop-color="#f05a82" />
+      <stop offset="100%" stop-color="#bd1845" />
+    </linearGradient>
+
+    <!-- Play Emblem Facet Gradient -->
+    <linearGradient id="play-facet" x1="0%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4" />
+      <stop offset="50%" stop-color="#ff8fa8" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.3" />
+    </linearGradient>
+
+    <!-- Petal Gradient -->
+    <linearGradient id="petal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffc2d1" />
+      <stop offset="50%" stop-color="#f06287" />
+      <stop offset="100%" stop-color="#d93b66" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur1" />
+      <feGaussianBlur stdDeviation="16" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="emblem-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#d94f72" flood-opacity="0.4" />
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <!-- Base Squircle Container with ClipPath -->
+  <g clip-path="url(#squircle-clip)">
+    <!-- Dark Obsidian Background -->
+    <rect x="16" y="16" width="480" height="480" fill="url(#bg-grad)" />
+
+    <!-- Ambient Sakura Glows Inside Squircle -->
+    <circle cx="370" cy="130" r="150" fill="#d94f72" opacity="0.2" />
+    <circle cx="140" cy="390" r="130" fill="#f05a82" opacity="0.12" />
+
+    <!-- Vinyl Disc Platform -->
+    <g transform="translate(256, 256)">
+      <!-- Disc Base -->
+      <circle r="182" fill="url(#vinyl-base)" stroke="#2b2f3d" stroke-width="2" />
+      <circle r="182" fill="url(#vinyl-sheen)" />
+
+      <!-- Concentric Vinyl Sound Grooves -->
+      <circle r="164" fill="none" stroke="#222634" stroke-width="1.2" stroke-dasharray="14 4 8 6" />
+      <circle r="148" fill="none" stroke="#1c1e29" stroke-width="1.5" />
+      <circle r="132" fill="none" stroke="#252936" stroke-width="1.1" stroke-dasharray="24 8 16 6" />
+      <circle r="116" fill="none" stroke="#1d202c" stroke-width="1.2" />
+      <circle r="100" fill="none" stroke="#292c3a" stroke-width="1" stroke-dasharray="18 6 10 4" />
+
+      <!-- Disc Center Label Core -->
+      <circle r="86" fill="#13151e" stroke="#373c4e" stroke-width="2" />
+      <circle r="84" fill="#171924" opacity="0.75" />
+    </g>
+
+    <!-- Stylized Play Button & '4' Fusion Emblem -->
+    <g filter="url(#emblem-shadow)">
+      <!-- Main Play Shape -->
+      <path d="M 202 146
+               C 188 138, 172 148, 172 164
+               L 172 348
+               C 172 364, 188 374, 202 366
+               L 348 274
+               C 362 266, 362 246, 348 238
+               Z"
+            fill="url(#play-grad)" />
+
+      <!-- Upper Facet Light Shimmer -->
+      <path d="M 202 146
+               C 188 138, 172 148, 172 164
+               L 172 256
+               L 332 256
+               L 202 146 Z"
+            fill="url(#play-facet)" />
+
+      <!-- Number '4' Signature Right Cross-Stroke -->
+      <path d="M 276 166
+               C 278 162, 284 162, 288 165
+               L 346 254
+               L 316 254
+               L 274 186
+               C 272 182, 273 172, 276 166 Z"
+            fill="#ffffff"
+            opacity="0.38" />
+
+      <path d="M 304 238
+               L 348 238
+               C 354 238, 356 244, 352 248
+               L 326 288
+               L 310 288
+               Z"
+            fill="#ffffff"
+            opacity="0.22" />
+
+      <!-- Center Vinyl Spindle Hole -->
+      <circle cx="236" cy="256" r="16" fill="#0d0f14" stroke="#f05a82" stroke-width="3" />
+      <circle cx="236" cy="256" r="6" fill="#ffb0bf" />
+    </g>
+
+    <!-- Sakura Cherry Blossom Petals -->
+    <!-- Top Right Floating Petal -->
+    <g transform="translate(376, 112) rotate(32) scale(0.92)" filter="url(#neon-glow)">
+      <path d="M 0 0
+               C -16 -24, -28 -8, -18 18
+               C -8 44, 24 38, 22 14
+               C 20 -10, 16 -24, 0 0 Z"
+            fill="url(#petal-grad)" />
+      <path d="M -2 4 C 4 14, 10 22, 14 26" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" opacity="0.65" />
+    </g>
+
+    <!-- Bottom Left Drifting Petal -->
+    <g transform="translate(114, 382) rotate(-44) scale(0.65)" opacity="0.92" filter="url(#neon-glow)">
+      <path d="M 0 0
+               C -16 -24, -28 -8, -18 18
+               C -8 44, 24 38, 22 14
+               C 20 -10, 16 -24, 0 0 Z"
+            fill="url(#petal-grad)" />
+    </g>
+
+    <!-- Floating Audio Glow Sparks -->
+    <circle cx="394" cy="222" r="3.5" fill="#ffb0bf" opacity="0.85" />
+    <circle cx="364" cy="362" r="2.8" fill="#ff8fa8" opacity="0.65" />
+    <circle cx="140" cy="170" r="2.2" fill="#ff8fa8" opacity="0.55" />
+  </g>
+
+  <!-- Glowing Outer Border -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="none" stroke="url(#border-grad)" stroke-width="3.5" />
+</svg>

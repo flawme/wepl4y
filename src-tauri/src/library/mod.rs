@@ -7,14 +7,17 @@
 pub mod commands;
 pub mod playlist_commands;
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::picture::PictureType;
 use lofty::tag::{Accessor, ItemKey};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use walkdir::WalkDir;
 
 use crate::db::{Database, Track};
@@ -78,7 +81,10 @@ fn find_folder_art(dir: &Path) -> Option<String> {
 }
 
 /// Read tags from an audio file using lofty, returning a Track ready for DB insertion.
-pub fn read_track_tags(file_path: &Path) -> Result<Track, String> {
+pub fn read_track_tags(
+    file_path: &Path,
+    art_cache_dir: Option<&Path>,
+) -> Result<Track, String> {
     let tagged_file = lofty::read_from_path(file_path)
         .map_err(|e| format!("Failed to read tags from {:?}: {e}", file_path))?;
 
@@ -145,8 +151,27 @@ pub fn read_track_tags(file_path: &Path) -> Result<Track, String> {
         .ok()
         .and_then(|m| m.len().try_into().ok());
 
-    // Album art: check embedded first, then folder
-    let art_path = find_folder_art(file_path.parent().unwrap_or(Path::new("")));
+    // Album art: extract embedded cover art first, then use a folder image.
+    let art_path = tag
+        .and_then(|tag| {
+            tag.get_picture_type(PictureType::CoverFront)
+                .or_else(|| tag.pictures().first())
+        })
+        .and_then(|picture| {
+            let cache_dir = art_cache_dir?;
+            std::fs::create_dir_all(cache_dir).ok()?;
+
+            let mut hasher = DefaultHasher::new();
+            file_path.to_string_lossy().hash(&mut hasher);
+            let extension = picture
+                .mime_type()
+                .and_then(|mime| mime.ext())
+                .unwrap_or("jpg");
+            let cache_path = cache_dir.join(format!("{:016x}.{extension}", hasher.finish()));
+            std::fs::write(&cache_path, picture.data()).ok()?;
+            cache_path.to_str().map(|path| path.to_string())
+        })
+        .or_else(|| find_folder_art(file_path.parent().unwrap_or(Path::new(""))));
 
     let id = uuid::Uuid::new_v4().to_string();
 
@@ -164,6 +189,7 @@ pub fn read_track_tags(file_path: &Path) -> Result<Track, String> {
         file_size,
         art_path,
         date_added: String::new(), // DB default handles this
+        favorite: false,
     })
 }
 
@@ -194,6 +220,8 @@ pub fn scan_folder(
         .unwrap_or(folder_path);
 
     log::info!("Scanning {folder_path}: {total} audio files found");
+
+    let art_cache_dir = app.path().app_data_dir().ok().map(|path| path.join("art-cache"));
 
     // Phase 2: Read tags and upsert
     for (i, file_path) in audio_files.iter().enumerate() {
@@ -226,13 +254,16 @@ pub fn scan_folder(
         let existing_mtime = db.get_track_mtime(&file_path_str).unwrap_or(None);
 
         let is_new = existing_mtime.is_none();
-        let needs_update = existing_mtime.map_or(true, |db_mtime| (mtime - db_mtime).abs() > 1.0);
+        let needs_update = existing_mtime.map_or(true, |db_mtime| {
+            (mtime - db_mtime).abs() > 1.0
+                || !db.track_has_art(&file_path_str).unwrap_or(false)
+        });
 
         if !is_new && !needs_update {
             continue;
         }
 
-        match read_track_tags(file_path) {
+        match read_track_tags(file_path, art_cache_dir.as_deref()) {
             Ok(mut track) => {
                 // Set date_added only for new tracks; DB default handles it
                 if !is_new {

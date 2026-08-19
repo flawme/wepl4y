@@ -24,6 +24,7 @@ export interface Track {
   file_size: number | null;
   art_path: string | null;
   date_added: string;
+  favorite: boolean;
 }
 
 export interface LibraryFolder {
@@ -76,4 +77,14 @@ export interface SmartPlaylistRule {
 export interface SmartPlaylistRules {
   match: "all" | "any";
   rules: SmartPlaylistRule[];
+}
+
+export interface Settings {
+  volume: number;
+  crossfade_enabled: boolean;
+  crossfade_secs: number;
+  repeat: string;
+  shuffle: boolean;
+  theme: string;
+  entry_animation: boolean;
 }

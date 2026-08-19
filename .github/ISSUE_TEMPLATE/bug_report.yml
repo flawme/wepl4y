@@ -1,0 +1,53 @@
+name: Bug Report
+description: Create a report to help us fix a defect or issue
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please fill in the details below to help us investigate.
+  - type: input
+    id: os
+    attributes:
+      label: Operating System & Version
+      placeholder: e.g. Ubuntu 24.04, macOS 14.4 Sonoma, Windows 11 23H2
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: wepl4y Version / Commit Hash
+      placeholder: e.g. 0.1.0 or main (commit abc1234)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps explaining how to reproduce the issue.
+      placeholder: |
+        1. Open wepl4y
+        2. Scan folder 'Music'
+        3. Click track...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal Logs / Error Output
+      description: Paste any error messages from the terminal or console.
+      render: shell
