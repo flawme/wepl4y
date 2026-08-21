@@ -68,7 +68,7 @@ fn handle_media_key(app: &AppHandle, key: &str) {
 
     match key {
         "MediaPlayPause" => {
-            state.toggle_play();
+            let _ = state.toggle_play();
         }
         "MediaNextTrack" => {
             let _ = state.next();

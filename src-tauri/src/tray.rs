@@ -73,7 +73,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                     if should_start_random {
                         let _ = crate::audio::commands::play_random_track_from_app(app);
                     } else if let Ok(mut state) = engine.state.lock() {
-                        state.toggle_play();
+                        let _ = state.toggle_play();
                     }
                 }
                 ID_NEXT => {

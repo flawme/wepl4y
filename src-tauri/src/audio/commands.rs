@@ -87,8 +87,7 @@ pub fn play_random_track_from_app(app: &AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub fn play_pause(engine: State<'_, PlaybackEngine>) -> Result<(), String> {
     let mut state = engine.state.lock().map_err(|e| e.to_string())?;
-    state.toggle_play();
-    Ok(())
+    state.toggle_play()
 }
 
 #[tauri::command]
@@ -101,8 +100,7 @@ pub fn pause(engine: State<'_, PlaybackEngine>) -> Result<(), String> {
 #[tauri::command]
 pub fn resume(engine: State<'_, PlaybackEngine>) -> Result<(), String> {
     let mut state = engine.state.lock().map_err(|e| e.to_string())?;
-    state.resume();
-    Ok(())
+    state.resume()
 }
 
 #[tauri::command]

@@ -196,20 +196,34 @@ impl PlaybackState {
         }
     }
 
-    pub fn resume(&mut self) {
-        if let Some(sink) = self.sink() {
+    pub fn resume(&mut self) -> Result<(), String> {
+        let sink_empty = self.sink().map(|s| s.empty()).unwrap_or(true);
+        if sink_empty {
+            if let Some(idx) = self.current_index {
+                return self.play_index(idx);
+            }
+        } else if let Some(sink) = self.sink() {
             sink.play();
             self.is_playing = true;
             self.revision += 1;
             self.dirty = true;
         }
+        Ok(())
     }
 
-    pub fn toggle_play(&mut self) {
+    pub fn toggle_play(&mut self) -> Result<(), String> {
         if self.is_playing {
             self.pause();
-        } else if self.current_index.is_some() {
-            self.resume();
+            Ok(())
+        } else if let Some(idx) = self.current_index {
+            let sink_empty = self.sink().map(|s| s.empty()).unwrap_or(true);
+            if sink_empty {
+                self.play_index(idx)
+            } else {
+                self.resume()
+            }
+        } else {
+            Ok(())
         }
     }
 
@@ -327,6 +341,16 @@ impl PlaybackState {
     }
 
     pub fn seek(&mut self, secs: f64) {
+        let sink_empty = self.sink().map(|s| s.empty()).unwrap_or(true);
+        if sink_empty {
+            if let Some(idx) = self.current_index {
+                let was_playing = self.is_playing;
+                let _ = self.play_index(idx);
+                if !was_playing {
+                    self.pause();
+                }
+            }
+        }
         if let Some(sink) = self.sink() {
             let _ = sink.try_seek(Duration::from_secs_f64(secs));
         }
