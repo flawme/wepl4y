@@ -1,6 +1,6 @@
 [package]
 name = "wepl4y"
-version = "0.1.0"
+version = "0.2.0"
 description = "A fast, native-feeling cross-platform desktop music player"
 authors = ["wepl4y"]
 edition = "2021"
@@ -22,6 +22,7 @@ tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rodio = { version = "0.20", features = ["symphonia-all"] }

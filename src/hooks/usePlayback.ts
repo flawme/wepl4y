@@ -37,6 +37,13 @@ export function usePlayback() {
     []
   );
 
+  /// Play files handed to us by the OS (double-click / "Open with").
+  const playPaths = useCallback(async (paths: string[]) => {
+    await invoke("play_paths", { paths });
+    const s = await invoke<PlaybackSnapshot>("get_playback_state");
+    setState(s);
+  }, []);
+
   const playPause = useCallback(async () => {
     if (state?.current_index == null) {
       await invoke("play_random_track");
@@ -86,6 +93,7 @@ export function usePlayback() {
   return {
     state,
     playQueue,
+    playPaths,
     playPause,
     next,
     prev,

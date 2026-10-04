@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { usePlayback } from "./hooks/usePlayback";
 import { useLibrary } from "./hooks/useLibrary";
 import { Sidebar } from "./components/Sidebar";
@@ -8,6 +9,7 @@ import { NowPlayingBar } from "./components/NowPlayingBar";
 import { ShortcutsModal } from "./components/ShortcutsModal";
 import { HudNotification } from "./components/HudNotification";
 import { isEditableElement } from "./utils/keyboard";
+import { applyTheme, THEMES, THEME_EVENT, type ThemeId } from "./utils/theme";
 import type { Track, QueueTrack, Playlist, Settings, LibraryFolder, RepeatMode } from "./types";
 
 function formatTime(secs: number): string {
@@ -40,6 +42,7 @@ function App() {
   const {
     state,
     playQueue,
+    playPaths,
     playPause,
     next,
     prev,
@@ -98,9 +101,11 @@ function App() {
     invoke<Settings>("get_settings")
       .then((loadedSettings) => {
         setSettings(loadedSettings);
+        applyTheme(loadedSettings.theme);
         startAnimationAfterPaint(loadedSettings.entry_animation);
       })
       .catch(() => {
+        applyTheme("dark");
         startAnimationAfterPaint(true);
       });
 
@@ -111,6 +116,60 @@ function App() {
       if (hudTimerRef.current !== undefined) window.clearTimeout(hudTimerRef.current);
     };
   }, []);
+
+  // Files opened from the OS: double-clicking a song in the file manager
+  // launches us with the path in argv, or forwards it here if we are already
+  // running. A file that arrived before this listener existed is collected
+  // with `take_pending_open_file`.
+  useEffect(() => {
+    let unlisten: UnlistenFn | undefined;
+    let disposed = false;
+
+    const playOpenedFile = async (path: string) => {
+      try {
+        await playPaths([path]);
+        const name = path.split(/[\\/]/).pop() ?? path;
+        showHud(`Playing ${name}`);
+      } catch (error) {
+        console.error("Failed to play opened file:", error);
+        showHud("Could not play that file");
+      }
+    };
+
+    listen<string>("open-file", (event) => {
+      void playOpenedFile(event.payload);
+    }).then((fn) => {
+      if (disposed) {
+        fn();
+      } else {
+        unlisten = fn;
+      }
+    });
+
+    invoke<string | null>("take_pending_open_file")
+      .then((path) => {
+        if (path) void playOpenedFile(path);
+      })
+      .catch((error) => console.error("Failed to collect opened file:", error));
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [playPaths, showHud]);
+
+  async function updateTheme(theme: ThemeId) {
+    if (!settings) return;
+    const nextSettings = { ...settings, theme };
+    setSettings(nextSettings);
+    applyTheme(theme);
+    void emit(THEME_EVENT, theme);
+    try {
+      await invoke("update_settings", { settings: nextSettings });
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+    }
+  }
 
   async function updateEntryAnimation(enabled: boolean) {
     if (!settings) return;
@@ -728,6 +787,38 @@ function App() {
             {settingsOpen && settings && (
               <div className="settings-popover">
                 <p className="settings-popover-title">Settings</p>
+                <div className="settings-theme">
+                  <p className="settings-theme-title">Theme</p>
+                  <div
+                    className="settings-theme-options"
+                    role="radiogroup"
+                    aria-label="Theme"
+                  >
+                    {THEMES.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={settings.theme === option.id}
+                        className={`settings-theme-option ${
+                          settings.theme === option.id
+                            ? "settings-theme-option-active"
+                            : ""
+                        }`}
+                        onClick={() => updateTheme(option.id)}
+                      >
+                        <span
+                          className={`settings-theme-swatch settings-theme-swatch-${option.id}`}
+                          aria-hidden="true"
+                        />
+                        <span className="settings-theme-copy">
+                          <strong>{option.label}</strong>
+                          <small>{option.hint}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="settings-toggle">
                   <input
                     type="checkbox"

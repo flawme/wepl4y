@@ -1,0 +1,10 @@
+[Desktop Entry]
+Categories={{categories}}
+Comment={{comment}}
+Exec={{exec}} %U
+StartupWMClass=wepl4y
+Icon={{icon}}
+Name={{name}}
+Terminal=false
+Type=Application
+MimeType=audio/mpeg;audio/flac;audio/x-wav;audio/ogg;audio/mp4;audio/x-ms-wma;audio/x-aiff;

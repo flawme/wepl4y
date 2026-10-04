@@ -9,8 +9,9 @@ import ReactDOM from "react-dom/client";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
-import type { PlaybackSnapshot, QueueTrack, Track, RepeatMode } from "./types";
+import type { PlaybackSnapshot, QueueTrack, Track, RepeatMode, Settings } from "./types";
 import { isEditableElement } from "./utils/keyboard";
+import { applyTheme, THEME_EVENT } from "./utils/theme";
 import { HudNotification } from "./components/HudNotification";
 import "./styles.css";
 
@@ -233,6 +234,7 @@ function MiniPlayer() {
   useEffect(() => {
     let disposed = false;
     let unlisten: UnlistenFn | undefined;
+    let themeUnlisten: UnlistenFn | undefined;
 
     invoke<PlaybackSnapshot>("get_playback_state")
       .then((snapshot) => {
@@ -249,6 +251,22 @@ function MiniPlayer() {
       })
       .catch(console.error);
 
+    // Mirror the theme chosen in the full player, and follow later changes.
+    invoke<Settings>("get_settings")
+      .then((loaded) => {
+        if (!disposed) applyTheme(loaded.theme);
+      })
+      .catch(console.error);
+
+    listen<string>(THEME_EVENT, (event) => {
+      if (!disposed) applyTheme(event.payload);
+    })
+      .then((stopListening) => {
+        if (disposed) stopListening();
+        else themeUnlisten = stopListening;
+      })
+      .catch(console.error);
+
     invoke<MiniPlayerMode>("get_mini_player_mode_cmd")
       .then((savedMode) => {
         if (!disposed && (savedMode === "compact" || savedMode === "full")) {
@@ -260,6 +278,7 @@ function MiniPlayer() {
     return () => {
       disposed = true;
       unlisten?.();
+      themeUnlisten?.();
       if (hudTimerRef.current !== undefined) window.clearTimeout(hudTimerRef.current);
     };
   }, []);

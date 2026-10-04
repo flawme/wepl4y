@@ -3,6 +3,7 @@ mod db;
 mod library;
 mod media;
 mod mini_player;
+mod open_file;
 mod settings;
 mod tray;
 mod watcher;
@@ -43,7 +44,15 @@ fn switch_to_full_player(app: tauri::AppHandle) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    env_logger::init();
+
     tauri::Builder::default()
+        // Must be the first plugin: a second launch (e.g. double-clicking
+        // another song) forwards its argv here instead of opening a new window.
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            let paths = open_file::audio_paths_from_args(args);
+            open_file::deliver(app, paths);
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -83,6 +92,15 @@ pub fn run() {
             // Load settings from disk
             app.manage(SettingsState::load(app.handle()));
 
+            // Files handed to us by the OS (double-click / "Open with").
+            // The frontend collects them via `take_pending_open_file`.
+            app.manage(open_file::OpenFileState::default());
+            let startup_paths =
+                open_file::audio_paths_from_args(std::env::args().skip(1));
+            if !startup_paths.is_empty() {
+                open_file::deliver(app.handle(), startup_paths);
+            }
+
             Ok(())
         })
         .manage(PlaybackEngine::new())
@@ -104,6 +122,9 @@ pub fn run() {
             settings::get_settings,
             settings::update_settings,
             settings::get_album_art,
+            // OS file-open commands
+            open_file::take_pending_open_file,
+            open_file::play_paths,
             // Audio commands
             audio::commands::play_track,
             audio::commands::play_file_test,
@@ -139,6 +160,22 @@ pub fn run() {
             library::playlist_commands::get_playlist_tracks,
             library::playlist_commands::evaluate_smart_playlist,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // macOS delivers double-clicked files as `file://` URLs rather
+            // than argv entries.
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            {
+                if let tauri::RunEvent::Opened { urls } = &event {
+                    let paths =
+                        open_file::audio_paths_from_args(urls.iter().map(|url| url.to_string()));
+                    open_file::deliver(app, paths);
+                }
+            }
+            #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+            {
+                let _ = (app, event);
+            }
+        });
 }
